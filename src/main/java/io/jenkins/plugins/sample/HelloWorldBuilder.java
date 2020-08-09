@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.Normalizer;
@@ -33,7 +34,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 public class HelloWorldBuilder extends Recorder implements SimpleBuildStep {
 
-    private static final String DEFAULT_PATH = "target\\surefire-reports";
+    private static final String DEFAULT_PATH = "target/surefire-reports";
     private final String host;
     private final String applicationId;
     private String path;
@@ -68,16 +69,16 @@ public class HelloWorldBuilder extends Recorder implements SimpleBuildStep {
     @Override
     public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         listener.getLogger().println(String.format("TESTORY: Uploading testresults from '%s' to '%s/applications/%s/runs'", path, host, applicationId));
+        System.out.println(String.format("{ workspace.name: %s, workspace.baseName: %S, workspace.parent: %s }", workspace.getName(), workspace.getBaseName(), workspace.getParent()));
 
-        Path resultsDirectory = Paths.get(path);
-        if(resultsDirectory.toFile().exists()) {
-            listener.getLogger().println("Reports exist!");
-        } else {
-            listener.getLogger().println("Reports dont exist!");
+        Path junitDirectory = Paths.get(workspace.getParent().toString(), workspace.getName(), path);
+        System.out.println("Looking in " + junitDirectory.toAbsolutePath());
+        Files.list(junitDirectory).forEach(file -> System.out.println("File in directory: "+file.getFileName()));
+        File[] testResults = junitDirectory.toFile().listFiles();
+
+        for(File file : testResults) {
+            listener.getLogger().println(String.format("Testresults found: %s", file.getName()));
         }
-
-        Path currentDirectory = Paths.get(workspace.getName());
-        listener.getLogger().println("Workspace directory is "+currentDirectory.toFile().getAbsolutePath());
     }
 
     @Symbol("greet")
