@@ -15,10 +15,17 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 import javax.servlet.ServletException;
+import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.Normalizer;
+import java.util.Arrays;
+import java.util.List;
 
 import jenkins.tasks.SimpleBuildStep;
 import org.jenkinsci.Symbol;
@@ -26,6 +33,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 public class HelloWorldBuilder extends Recorder implements SimpleBuildStep {
 
+    private static final String DEFAULT_PATH = "target\\surefire-reports";
     private final String host;
     private final String applicationId;
     private String path;
@@ -50,12 +58,26 @@ public class HelloWorldBuilder extends Recorder implements SimpleBuildStep {
 
     @DataBoundSetter
     public void setPath(String path) {
-        this.path = path;
+        if(path == null || path.equals("")) {
+            this.path = DEFAULT_PATH;
+        } else {
+            this.path = path;
+        }
     }
 
     @Override
     public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
-        listener.getLogger().println(String.format("Uploading testresults from '%s' to '%s/applications/%s/runs'", path, host, applicationId));
+        listener.getLogger().println(String.format("TESTORY: Uploading testresults from '%s' to '%s/applications/%s/runs'", path, host, applicationId));
+
+        Path resultsDirectory = Paths.get(path);
+        if(resultsDirectory.toFile().exists()) {
+            listener.getLogger().println("Reports exist!");
+        } else {
+            listener.getLogger().println("Reports dont exist!");
+        }
+
+        Path currentDirectory = Paths.get(workspace.getName());
+        listener.getLogger().println("Workspace directory is "+currentDirectory.toFile().getAbsolutePath());
     }
 
     @Symbol("greet")
@@ -100,6 +122,14 @@ public class HelloWorldBuilder extends Recorder implements SimpleBuildStep {
             return "Testory upload";
         }
 
+    }
+
+    class TestoryFileFilter implements FileFilter, Serializable {
+
+        @Override
+        public boolean accept(File file) {
+            return file.getPath().startsWith(path) && file.getName().endsWith(".xml");
+        }
     }
 
 }
