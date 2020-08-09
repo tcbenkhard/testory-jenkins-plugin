@@ -1,0 +1,15 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <f:entry title="Hostname" field="host">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="Application ID" field="applicationId">
+            <f:textbox />
+        </f:entry>
+    <f:advanced>
+        <f:entry title="Path to testresults" field="path"
+                 description="The path to the testresults, defaults to 'target/surefire-reports/'">
+            <f:textbox />
+        </f:entry>
+    </f:advanced>
+</j:jelly>
