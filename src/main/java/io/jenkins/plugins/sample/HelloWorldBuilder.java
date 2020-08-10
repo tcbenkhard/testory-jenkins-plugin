@@ -1,17 +1,20 @@
 package io.jenkins.plugins.sample;
 
-import hudson.Launcher;
 import hudson.Extension;
 import hudson.FilePath;
-import hudson.tasks.Publisher;
-import hudson.tasks.Recorder;
-import hudson.util.FormValidation;
+import hudson.Launcher;
 import hudson.model.AbstractProject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.Publisher;
+import hudson.tasks.Recorder;
+import hudson.util.FormValidation;
+import jenkins.tasks.SimpleBuildStep;
+import nl.benkhard.testory.jenkins.client.TestoryClient;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 import javax.servlet.ServletException;
@@ -24,32 +27,25 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.Normalizer;
-import java.util.Arrays;
-import java.util.List;
-
-import jenkins.tasks.SimpleBuildStep;
-import org.jenkinsci.Symbol;
-import org.kohsuke.stapler.DataBoundSetter;
 
 public class HelloWorldBuilder extends Recorder implements SimpleBuildStep {
 
     private static final String DEFAULT_PATH = "target/surefire-reports";
     private final String host;
-    private final String applicationId;
+    private final int applicationId;
     private String path;
 
     @DataBoundConstructor
     public HelloWorldBuilder(String host, String applicationId) {
         this.host = host;
-        this.applicationId = applicationId;
+        this.applicationId = Integer.parseInt(applicationId);
     }
 
     public String getHost() {
         return host;
     }
 
-    public String getApplicationId() {
+    public int getApplicationId() {
         return applicationId;
     }
 
@@ -74,11 +70,12 @@ public class HelloWorldBuilder extends Recorder implements SimpleBuildStep {
         Path junitDirectory = Paths.get(workspace.getParent().toString(), workspace.getName(), path);
         System.out.println("Looking in " + junitDirectory.toAbsolutePath());
         Files.list(junitDirectory).forEach(file -> System.out.println("File in directory: "+file.getFileName()));
-        File[] testResults = junitDirectory.toFile().listFiles();
+        File[] testResults = junitDirectory.toFile().listFiles(file -> file.getName().endsWith(".xml"));
 
         for(File file : testResults) {
             listener.getLogger().println(String.format("Testresults found: %s", file.getName()));
         }
+        TestoryClient.uploadResults(host, applicationId, testResults);
     }
 
     @Symbol("greet")
@@ -87,7 +84,6 @@ public class HelloWorldBuilder extends Recorder implements SimpleBuildStep {
 
         public FormValidation doCheckHost(@QueryParameter String host)
                 throws IOException, ServletException {
-            System.out.println(String.format("doCheckFields: { host: %s }", host));
 
             try {
                 URL url = new URL(host);
@@ -101,7 +97,6 @@ public class HelloWorldBuilder extends Recorder implements SimpleBuildStep {
 
         public FormValidation doCheckApplicationId(@QueryParameter String applicationId)
                 throws IOException, ServletException {
-            System.out.println(String.format("doCheckApplicationId: { applicationId: %s }", applicationId));
 
             try {
                 Integer.parseInt(applicationId);
